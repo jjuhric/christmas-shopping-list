@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shuffle, performDraw } from '../../utils/drawUtils';
+import { shuffle, performDraw, getDrawEligibleUsers } from '../../utils/drawUtils';
 
 describe('Draw Algorithm (drawUtils.js)', () => {
 
@@ -76,6 +76,23 @@ describe('Draw Algorithm (drawUtils.js)', () => {
       }));
       const result = performDraw(users);
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('getDrawEligibleUsers', () => {
+    it('removes users flagged excludeFromDraw (e.g. babies/toddlers)', () => {
+      const users = [
+        { id: '1', familyId: 'A' },
+        { id: '2', familyId: 'A', excludeFromDraw: true },
+        { id: '3', familyId: 'B', excludeFromDraw: false },
+      ];
+      const eligible = getDrawEligibleUsers(users);
+      expect(eligible.map(u => u.id)).toEqual(['1', '3']);
+    });
+
+    it('returns everyone unchanged when no one is excluded', () => {
+      const users = [{ id: '1' }, { id: '2' }];
+      expect(getDrawEligibleUsers(users)).toEqual(users);
     });
   });
 

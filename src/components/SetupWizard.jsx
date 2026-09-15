@@ -24,6 +24,7 @@ export default function SetupWizard({ onComplete }) {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberIsAdmin, setNewMemberIsAdmin] = useState(false);
   const [newMemberIsChild, setNewMemberIsChild] = useState(false);
+  const [newMemberExcludeFromDraw, setNewMemberExcludeFromDraw] = useState(false);
   const [inviteStatus, setInviteStatus] = useState('');
 
   const [saving, setSaving] = useState(false);
@@ -139,6 +140,7 @@ export default function SetupWizard({ onComplete }) {
         isAdmin: newMemberIsChild ? false : newMemberIsAdmin,
         role: newMemberIsAdmin ? 'admin' : 'user',
         isManaged: newMemberIsChild,
+        excludeFromDraw: newMemberExcludeFromDraw,
         setupComplete: false,
         wishlist: [],
         recipientId: null,
@@ -173,6 +175,7 @@ export default function SetupWizard({ onComplete }) {
       setNewMemberEmail('');
       setNewMemberIsAdmin(false);
       setNewMemberIsChild(false);
+      setNewMemberExcludeFromDraw(false);
     } catch (err) {
       console.error("Error adding member:", err);
       alert("Failed to add member: " + err.message);
@@ -272,7 +275,7 @@ export default function SetupWizard({ onComplete }) {
                 required
               />
               <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                Family members in this group will not pick each other during the Christmas Shopping List draw.
+                Family members in this group will not pick each other during the Christmas Shopping List draw. If you have a large extended family, use a separate group name for each household (e.g. a couple and their own kids) rather than one name for everyone - otherwise a valid draw may be impossible.
               </small>
             </div>
 
@@ -358,6 +361,19 @@ export default function SetupWizard({ onComplete }) {
                 />
                 <label htmlFor="wizardIsChild" style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>
                   Child / Managed profile (No email needed, parent manages)
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="wizardExcludeFromDraw"
+                  checked={newMemberExcludeFromDraw}
+                  onChange={e => setNewMemberExcludeFromDraw(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <label htmlFor="wizardExcludeFromDraw" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
+                  Too young to participate (excluded from the draw)
                 </label>
               </div>
 

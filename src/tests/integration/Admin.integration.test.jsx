@@ -264,4 +264,46 @@ describe('Admin Integration', () => {
       );
     });
   });
+
+  it('excludes members flagged excludeFromDraw from the Christmas Shopping List draw', async () => {
+    useAuth.mockReturnValue({
+      userProfile: { id: 'master1', name: 'Master', familyId: 'FamA', role: 'master' },
+      isMasterAdmin: true,
+      isAdmin: true
+    });
+
+    getDocs.mockResolvedValue({
+      docs: [
+        { id: 'master1', data: () => ({ name: 'Master', familyId: 'FamA', isAdmin: true, role: 'master' }) },
+        { id: 'u1', data: () => ({ name: 'Adult One', familyId: 'FamB' }) },
+        { id: 'u2', data: () => ({ name: 'Adult Two', familyId: 'FamC' }) },
+        { id: 'baby1', data: () => ({ name: 'Baby', familyId: 'FamB', excludeFromDraw: true }) }
+      ]
+    });
+
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(
+      <MemoryRouter>
+        <Admin />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Baby')).toBeInTheDocument();
+      expect(screen.getByText('Excluded from draw')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Run Christmas Shopping List Draw/i }));
+
+    await waitFor(() => {
+      expect(setDoc).toHaveBeenCalled();
+    });
+
+    // The excluded baby should never be written to as a buyer with a recipientId
+    const excludedWasAssigned = setDoc.mock.calls.some(([ref]) => ref.id === 'baby1');
+    expect(excludedWasAssigned).toBe(false);
+
+    alertMock.mockRestore();
+  });
 });

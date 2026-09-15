@@ -1,8 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Baseline fix: require a signed-in Firebase Auth user for all access.
+    // Previously this was `allow read, write: if true`, which let anyone on
+    // the internet read/write every family's names, emails, wishlists, and
+    // Secret Santa assignments. Every read/write in the app already only
+    // happens after Firebase Auth sign-in, so this does not change app
+    // behavior. Finer-grained per-family scoping is a good follow-up but is
+    // out of scope for this pass.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }

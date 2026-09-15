@@ -8,6 +8,14 @@ export function shuffle(array) {
   return array;
 }
 
+// Members flagged excludeFromDraw (e.g. babies/toddlers too young to pick a gift)
+// are left out of the exchange entirely - they neither buy nor receive through
+// the draw. Their gifts come directly from their own parents/grandparents, same
+// as the existing "Extra Person" flow.
+export function getDrawEligibleUsers(users) {
+  return users.filter(u => !u.excludeFromDraw);
+}
+
 export function performDraw(users) {
   if (users.length < 3) {
     return { success: false, message: 'Need at least 3 users across families to conduct the draw.' };

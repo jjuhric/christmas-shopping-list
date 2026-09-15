@@ -5,7 +5,7 @@ import { collection, getDocs, setDoc, doc, deleteDoc, getDoc, updateDoc, query, 
 import { Link } from 'react-router-dom';
 import { ShieldCheck, UserPlus, Trash2, Mail, Send, Settings, ArrowLeft, RefreshCw, Bug, CheckCircle, Edit2, X } from 'lucide-react';
 import { sendInviteEmail, getEmailConfig, saveEmailConfig } from '../utils/emailService';
-import { performDraw } from '../utils/drawUtils';
+import { performDraw, getDrawEligibleUsers } from '../utils/drawUtils';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function Admin() {
@@ -17,6 +17,7 @@ export default function Admin() {
   const [family, setFamily] = useState(userProfile?.familyId || '');
   const [newUserIsAdmin, setNewUserIsAdmin] = useState(false);
   const [isManaged, setIsManaged] = useState(false);
+  const [excludeFromDraw, setExcludeFromDraw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -172,6 +173,7 @@ export default function Admin() {
         isAdmin: isManaged ? false : newUserIsAdmin,
         role: newUserIsAdmin ? 'admin' : 'user',
         isManaged: isManaged,
+        excludeFromDraw: excludeFromDraw,
         setupComplete: false,
         wishlist: [],
         recipientId: null,
@@ -207,6 +209,7 @@ export default function Admin() {
       if (isMasterAdmin) setFamily('');
       setNewUserIsAdmin(false);
       setIsManaged(false);
+      setExcludeFromDraw(false);
       fetchUsers();
     } catch (err) {
       console.error("Error adding user: ", err);
@@ -379,7 +382,7 @@ export default function Admin() {
 
   async function handleDraw() {
     setLoading(true);
-    const result = performDraw(users);
+    const result = performDraw(getDrawEligibleUsers(users));
 
     if (!result.success) {
       alert(result.message);
@@ -442,10 +445,10 @@ export default function Admin() {
                 <Settings size={18} /> EmailJS Setup
               </button>
               
-              <button 
-                className="btn btn-primary" 
-                onClick={handleDraw} 
-                disabled={loading || users.length < 3}
+              <button
+                className="btn btn-primary"
+                onClick={handleDraw}
+                disabled={loading || getDrawEligibleUsers(users).length < 3}
               >
                 Run Christmas Shopping List Draw
               </button>
@@ -619,11 +622,11 @@ export default function Admin() {
 
             {!isManaged && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="newUserIsAdmin"
-                  checked={newUserIsAdmin} 
-                  onChange={e => setNewUserIsAdmin(e.target.checked)} 
+                  checked={newUserIsAdmin}
+                  onChange={e => setNewUserIsAdmin(e.target.checked)}
                   style={{ width: '18px', height: '18px' }}
                 />
                 <label htmlFor="newUserIsAdmin" style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--primary)' }}>
@@ -631,16 +634,29 @@ export default function Admin() {
                 </label>
               </div>
             )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                id="excludeFromDraw"
+                checked={excludeFromDraw}
+                onChange={e => setExcludeFromDraw(e.target.checked)}
+                style={{ width: '18px', height: '18px' }}
+              />
+              <label htmlFor="excludeFromDraw" style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                Too young to participate (excluded from the draw)
+              </label>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Full Name</label>
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={e => setName(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
                 required
               />
@@ -649,11 +665,11 @@ export default function Admin() {
             {!isManaged && (
               <div>
                 <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Google Email (Unique)</label>
-                <input 
-                  type="email" 
-                  placeholder="Google Email" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
+                <input
+                  type="email"
+                  placeholder="Google Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
                   required
                 />
@@ -662,15 +678,20 @@ export default function Admin() {
 
             <div>
               <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Family Group Name</label>
-              <input 
-                type="text" 
-                placeholder="Family Name (e.g. Uhrick)" 
-                value={isMasterAdmin ? family : userProfile?.familyId} 
-                onChange={e => isMasterAdmin && setFamily(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Family Name (e.g. Uhrick)"
+                value={isMasterAdmin ? family : userProfile?.familyId}
+                onChange={e => isMasterAdmin && setFamily(e.target.value)}
                 disabled={!isMasterAdmin}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: isMasterAdmin ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.05)', color: 'white' }}
                 required
               />
+              {isMasterAdmin && (
+                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+                  Use a separate group name for each household that shouldn't draw each other - e.g. a couple and their own kids. Don't put the whole extended family under one name, or a valid draw becomes impossible.
+                </small>
+              )}
             </div>
           </div>
 
@@ -745,6 +766,11 @@ export default function Admin() {
                       <span style={{ background: 'rgba(255,255,255,0.1)', color: '#cbd5e1', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem' }}>Child</span>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Member</span>
+                    )}
+                    {u.excludeFromDraw && (
+                      <span style={{ marginLeft: '0.35rem', background: 'rgba(148,163,184,0.2)', color: '#94a3b8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', border: '1px solid rgba(148,163,184,0.35)' }}>
+                        Excluded from draw
+                      </span>
                     )}
                   </td>
                   <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
