@@ -9,7 +9,7 @@ import { performDraw, getDrawEligibleUsers } from '../utils/drawUtils';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function Admin() {
-  const { userProfile, isMasterAdmin, isAdmin } = useAuth();
+  const { userProfile, isMasterAdmin, isAdmin, resetPassword } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [name, setName] = useState('');
@@ -233,6 +233,30 @@ export default function Admin() {
       alert(`Invite email sent to ${user.email}!`);
     } else {
       alert(result.message || "Failed to send email.");
+    }
+  }
+
+  // Master Admin only: send a password reset email so any member can regain
+  // access over the holidays. Only applies to email/password accounts - Google
+  // sign-in users manage their own password through Google and will get a
+  // "no password account" style error, which we surface as a friendly message.
+  async function handleResetPassword(user) {
+    if (!user.email) return;
+    if (!window.confirm(`Send a password reset email to ${user.name} (${user.email})?`)) return;
+
+    setLoading(true);
+    try {
+      await resetPassword(user.email);
+      alert(`Password reset email sent to ${user.email}!`);
+    } catch (err) {
+      console.error("Error sending password reset:", err);
+      if (err.code === 'auth/user-not-found') {
+        alert(`No password-based account found for ${user.email}. They likely sign in with Google, or haven't activated their account yet.`);
+      } else {
+        alert("Failed to send password reset email: " + err.message);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -785,6 +809,17 @@ export default function Admin() {
                           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#60a5fa', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}
                         >
                           <Send size={15} />
+                        </button>
+                      )}
+                      {/* Master Admin only: reset a member's password so they can keep using the app over the holidays */}
+                      {isMasterAdmin && u.email && (
+                        <button
+                          onClick={() => handleResetPassword(u)}
+                          title="Send Password Reset Email"
+                          data-testid={`reset-password-${u.id}`}
+                          style={{ background: 'rgba(245,158,11,0.2)', border: 'none', color: '#fbbf24', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}
+                        >
+                          <RefreshCw size={15} />
                         </button>
                       )}
                       {/* Edit member button */}

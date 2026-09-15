@@ -306,4 +306,72 @@ describe('Admin Integration', () => {
 
     alertMock.mockRestore();
   });
+
+  it('lets the Master Admin send a password reset email to any member', async () => {
+    const resetPasswordMock = vi.fn().mockResolvedValue();
+    useAuth.mockReturnValue({
+      userProfile: { id: 'master1', name: 'Master', familyId: 'FamA', role: 'master' },
+      isMasterAdmin: true,
+      isAdmin: true,
+      resetPassword: resetPasswordMock
+    });
+
+    getDocs.mockResolvedValue({
+      docs: [
+        { id: 'master1', data: () => ({ name: 'Master', familyId: 'FamA', isAdmin: true, role: 'master' }) },
+        { id: 'member@test.com', data: () => ({ name: 'Member One', familyId: 'FamB', email: 'member@test.com' }) }
+      ]
+    });
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(
+      <MemoryRouter>
+        <Admin />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reset-password-member@test.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('reset-password-member@test.com'));
+
+    await waitFor(() => {
+      expect(resetPasswordMock).toHaveBeenCalledWith('member@test.com');
+      expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('Password reset email sent'));
+    });
+
+    confirmSpy.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  it('hides the password reset action from Family Admins', async () => {
+    useAuth.mockReturnValue({
+      userProfile: { id: 'admin1', name: 'Admin', familyId: 'FamA', isAdmin: true },
+      isMasterAdmin: false,
+      isAdmin: true,
+      resetPassword: vi.fn()
+    });
+
+    getDocs.mockResolvedValue({
+      docs: [
+        { id: 'admin1', data: () => ({ name: 'Admin', familyId: 'FamA', isAdmin: true, email: 'admin1@test.com' }) },
+        { id: 'member@test.com', data: () => ({ name: 'Member One', familyId: 'FamA', email: 'member@test.com' }) }
+      ]
+    });
+
+    render(
+      <MemoryRouter>
+        <Admin />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Member One')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('reset-password-member@test.com')).not.toBeInTheDocument();
+  });
 });
