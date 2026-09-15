@@ -1,6 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow anyone to submit a bug report, but keep bug report reads and
+    // follow-up changes behind authentication.
+    match /bug_reports/{document} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
     // Baseline fix: require a signed-in Firebase Auth user for all access.
     // Previously this was `allow read, write: if true`, which let anyone on
     // the internet read/write every family's names, emails, wishlists, and
