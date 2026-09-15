@@ -47,8 +47,9 @@ export default function ChildInstructionsPage() {
       </KidSection>
 
       <KidSection emoji="🎁" title="Your Buy For List">
-        If you're old enough to help pick out presents, this list shows who you're shopping for. Tap a
-        name to see what they wished for!
+        If you're old enough to have your own grown-up account and help pick out presents, this list
+        shows who you're shopping for. Tap a name to see what they wished for! Younger kids with a
+        "Child" profile don't get a Buy For List - that's just for grown-ups doing the present-picking.
       </KidSection>
 
       <KidSection emoji="✅" title="Checking Things Off">

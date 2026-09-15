@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shuffle, performDraw, getDrawEligibleUsers } from '../../utils/drawUtils';
+import { shuffle, performDraw, getDrawEligibleUsers, isGrandchildExemptPair } from '../../utils/drawUtils';
 
 describe('Draw Algorithm (drawUtils.js)', () => {
 
@@ -77,22 +77,86 @@ describe('Draw Algorithm (drawUtils.js)', () => {
       const result = performDraw(users);
       expect(result.success).toBe(true);
     });
+
+    it('still blocks a grandchild from their own parent even when both share a household with the grandparent', () => {
+      const users = [
+        { id: 'grandparent', familyId: 'A' },
+        { id: 'parent', familyId: 'A', relation: 'Son/Step-Son', addedByUserId: 'grandparent' },
+        { id: 'grandkid', familyId: 'A', relation: 'Grandson', addedByUserId: 'grandparent' },
+        { id: 'outsider1', familyId: 'B' },
+        { id: 'outsider2', familyId: 'B' },
+      ];
+      const result = performDraw(users);
+
+      expect(result.success).toBe(true);
+      const byId = Object.fromEntries(users.map(u => [u.id, u]));
+      for (const [buyerId, recipientId] of Object.entries(result.assignments)) {
+        const buyer = byId[buyerId];
+        const recipient = byId[recipientId];
+        if (buyer.id === 'grandkid' && recipient.id === 'parent') {
+          throw new Error('grandkid should never be assigned their own parent');
+        }
+        if (buyer.id === 'parent' && recipient.id === 'grandkid') {
+          throw new Error('parent should never be assigned their own child');
+        }
+      }
+    });
+  });
+
+  describe('isGrandchildExemptPair', () => {
+    it('exempts a grandchild specifically with the grandparent who added them', () => {
+      const grandparent = { id: 'g1' };
+      const grandkid = { id: 'k1', relation: 'Granddaughter', addedByUserId: 'g1' };
+      expect(isGrandchildExemptPair(grandkid, grandparent)).toBe(true);
+      expect(isGrandchildExemptPair(grandparent, grandkid)).toBe(true);
+    });
+
+    it('does not exempt the grandchild from anyone else, even in the same family', () => {
+      const grandkid = { id: 'k1', relation: 'Grandson', addedByUserId: 'g1' };
+      const someoneElse = { id: 'someone-else' };
+      expect(isGrandchildExemptPair(grandkid, someoneElse)).toBe(false);
+    });
+
+    it('does not exempt a Son/Daughter relation (labels only, no exclusion effect)', () => {
+      const parent = { id: 'p1' };
+      const child = { id: 'c1', relation: 'Son/Step-Son', addedByUserId: 'p1' };
+      expect(isGrandchildExemptPair(child, parent)).toBe(false);
+    });
   });
 
   describe('getDrawEligibleUsers', () => {
-    it('removes users flagged excludeFromDraw (e.g. babies/toddlers)', () => {
+    it('removes users flagged excludeFromDraw (e.g. an adult sitting out this year)', () => {
       const users = [
-        { id: '1', familyId: 'A' },
-        { id: '2', familyId: 'A', excludeFromDraw: true },
-        { id: '3', familyId: 'B', excludeFromDraw: false },
+        { id: '1', familyId: 'A', hasSignedIn: true },
+        { id: '2', familyId: 'A', hasSignedIn: true, excludeFromDraw: true },
+        { id: '3', familyId: 'B', hasSignedIn: true, excludeFromDraw: false },
       ];
       const eligible = getDrawEligibleUsers(users);
       expect(eligible.map(u => u.id)).toEqual(['1', '3']);
     });
 
-    it('returns everyone unchanged when no one is excluded', () => {
-      const users = [{ id: '1' }, { id: '2' }];
-      expect(getDrawEligibleUsers(users)).toEqual(users);
+    it('always removes Child (managed) profiles regardless of any other flag', () => {
+      const users = [
+        { id: 'adult', familyId: 'A', hasSignedIn: true },
+        { id: 'kid', familyId: 'A', isManaged: true, hasSignedIn: true },
+      ];
+      expect(getDrawEligibleUsers(users).map(u => u.id)).toEqual(['adult']);
+    });
+
+    it('removes "Extra" people added just for someone\'s personal buy-for list', () => {
+      const users = [
+        { id: 'adult', familyId: 'A', hasSignedIn: true },
+        { id: 'grandma', familyId: 'A', isExtra: true, hasSignedIn: true },
+      ];
+      expect(getDrawEligibleUsers(users).map(u => u.id)).toEqual(['adult']);
+    });
+
+    it('removes adults who have never actually signed in', () => {
+      const users = [
+        { id: 'active', familyId: 'A', hasSignedIn: true },
+        { id: 'invited-not-yet-signed-in', familyId: 'A', hasSignedIn: false },
+      ];
+      expect(getDrawEligibleUsers(users).map(u => u.id)).toEqual(['active']);
     });
   });
 

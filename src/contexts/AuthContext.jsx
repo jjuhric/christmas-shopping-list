@@ -8,7 +8,7 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, limit, query } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, limit, query } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -91,6 +91,7 @@ export function AuthProvider({ children }) {
                 wishlist: [],
                 recipientId: null,
                 purchasedMembers: {},
+                hasSignedIn: true,
                 createdAt: Date.now()
               };
               await setDoc(userRef, initialMaster);
@@ -103,6 +104,15 @@ export function AuthProvider({ children }) {
             }
           } else {
             setIsUninvited(false);
+            // First time this invited member has actually signed in - only
+            // members who have done this are eligible for the draw.
+            if (!userSnap.data().hasSignedIn) {
+              try {
+                await updateDoc(userRef, { hasSignedIn: true, firstSignInAt: Date.now() });
+              } catch (err) {
+                console.warn("Could not record first sign-in:", err);
+              }
+            }
           }
 
           // Set up real-time listener for current user's profile

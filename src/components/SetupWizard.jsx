@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { doc, updateDoc, collection, setDoc, getDocs, getDoc, query, where } from 'firebase/firestore';
 import { Gift, CheckCircle, Sparkles, UserPlus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { sendInviteEmail } from '../utils/emailService';
+import { RELATION_OPTIONS } from '../utils/relations';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function SetupWizard({ onComplete }) {
@@ -25,6 +26,7 @@ export default function SetupWizard({ onComplete }) {
   const [newMemberIsAdmin, setNewMemberIsAdmin] = useState(false);
   const [newMemberIsChild, setNewMemberIsChild] = useState(false);
   const [newMemberExcludeFromDraw, setNewMemberExcludeFromDraw] = useState(false);
+  const [newMemberRelation, setNewMemberRelation] = useState('');
   const [inviteStatus, setInviteStatus] = useState('');
 
   const [saving, setSaving] = useState(false);
@@ -141,6 +143,9 @@ export default function SetupWizard({ onComplete }) {
         role: newMemberIsAdmin ? 'admin' : 'user',
         isManaged: newMemberIsChild,
         excludeFromDraw: newMemberExcludeFromDraw,
+        relation: newMemberRelation || null,
+        addedByUserId: userProfile.id,
+        hasSignedIn: false,
         setupComplete: false,
         wishlist: [],
         recipientId: null,
@@ -176,6 +181,7 @@ export default function SetupWizard({ onComplete }) {
       setNewMemberIsAdmin(false);
       setNewMemberIsChild(false);
       setNewMemberExcludeFromDraw(false);
+      setNewMemberRelation('');
     } catch (err) {
       console.error("Error adding member:", err);
       alert("Failed to add member: " + err.message);
@@ -364,18 +370,24 @@ export default function SetupWizard({ onComplete }) {
                 </label>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  id="wizardExcludeFromDraw"
-                  checked={newMemberExcludeFromDraw}
-                  onChange={e => setNewMemberExcludeFromDraw(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <label htmlFor="wizardExcludeFromDraw" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
-                  Too young to participate (excluded from the draw)
-                </label>
-              </div>
+              {newMemberIsChild ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                  Child profiles are just for tracking a wishlist and shopping list - they're never part of the draw itself.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="wizardExcludeFromDraw"
+                    checked={newMemberExcludeFromDraw}
+                    onChange={e => setNewMemberExcludeFromDraw(e.target.checked)}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <label htmlFor="wizardExcludeFromDraw" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
+                    Sit out this year's draw
+                  </label>
+                </div>
+              )}
 
               <input
                 type="text"
@@ -385,6 +397,22 @@ export default function SetupWizard({ onComplete }) {
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
                 required
               />
+
+              <div>
+                <select
+                  value={newMemberRelation}
+                  onChange={e => setNewMemberRelation(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                >
+                  <option value="">Relation to you (optional)</option>
+                  {RELATION_OPTIONS.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+                  Grandson/Granddaughter lets that grandchild draw or be drawn by you specifically, even though you share a family group.
+                </small>
+              </div>
 
               {!newMemberIsChild && (
                 <>

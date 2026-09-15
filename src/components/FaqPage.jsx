@@ -7,7 +7,11 @@ const FAQS = [
   },
   {
     q: 'Why can\'t I be assigned to buy for someone in my own family?',
-    a: 'The draw is designed to keep gifts a surprise within your own household - your spouse, your kids, etc. Everyone is grouped by "Family Group," and the draw guarantees no one is assigned someone from their own group.'
+    a: 'The draw is designed to keep gifts a surprise within your own household - your spouse, your kids, etc. Everyone is grouped by "Family Group," and the draw guarantees no one is assigned someone from their own group. The one exception is grandparent/grandchild pairs - see the next question.'
+  },
+  {
+    q: 'My grandkids are in my family group. Can I draw them, or they draw me?',
+    a: 'Yes. When you add a grandchild, set their "Relation to You" to Grandson or Granddaughter. That specifically exempts the two of you from the usual same-family block, so you can draw each other - while they\'re still blocked from drawing their own parent or anyone else in the group.'
   },
   {
     q: 'The Admin clicked "Run Draw" and it says a valid combination couldn\'t be found. What happened?',
@@ -15,7 +19,11 @@ const FAQS = [
   },
   {
     q: 'Can young kids participate?',
-    a: 'Yes, as "Child" (managed) profiles that a parent controls. If a child is too young to actually pick out and buy a gift, check "Too young to participate" when adding them - they\'ll still be trackable in the app and can still receive gifts, they just won\'t be assigned as a buyer in the draw.'
+    a: 'Child (managed) profiles are just for tracking a wishlist and shopping list for a parent\'s convenience - they\'re never part of the actual draw, as either a buyer or a recipient. Their gifts come directly from their own parents/grandparents rather than through the lottery.'
+  },
+  {
+    q: 'I invited an adult family member, but the draw ran without them. Why?',
+    a: 'Only people who have actually signed in at least once are included in the draw - so if someone was invited but hasn\'t logged in yet, they won\'t be in the pool. This is intentional: with 4 adult kids who "may or may not" participate each year, only the ones who show up get included. Once they sign in, they\'ll be eligible next time the draw runs.'
   },
   {
     q: 'I need to buy for someone who isn\'t part of my Secret Santa draw - like a grandparent, a teacher, or a friend.',

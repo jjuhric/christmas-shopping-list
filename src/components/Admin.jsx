@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ShieldCheck, UserPlus, Trash2, Mail, Send, Settings, ArrowLeft, RefreshCw, Bug, CheckCircle, Edit2, X } from 'lucide-react';
 import { sendInviteEmail, getEmailConfig, saveEmailConfig } from '../utils/emailService';
 import { performDraw, getDrawEligibleUsers } from '../utils/drawUtils';
+import { RELATION_OPTIONS } from '../utils/relations';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function Admin() {
@@ -18,6 +19,7 @@ export default function Admin() {
   const [newUserIsAdmin, setNewUserIsAdmin] = useState(false);
   const [isManaged, setIsManaged] = useState(false);
   const [excludeFromDraw, setExcludeFromDraw] = useState(false);
+  const [relation, setRelation] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -174,6 +176,9 @@ export default function Admin() {
         role: newUserIsAdmin ? 'admin' : 'user',
         isManaged: isManaged,
         excludeFromDraw: excludeFromDraw,
+        relation: relation || null,
+        addedByUserId: userProfile.id,
+        hasSignedIn: false,
         setupComplete: false,
         wishlist: [],
         recipientId: null,
@@ -210,6 +215,7 @@ export default function Admin() {
       setNewUserIsAdmin(false);
       setIsManaged(false);
       setExcludeFromDraw(false);
+      setRelation('');
       fetchUsers();
     } catch (err) {
       console.error("Error adding user: ", err);
@@ -659,19 +665,27 @@ export default function Admin() {
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                id="excludeFromDraw"
-                checked={excludeFromDraw}
-                onChange={e => setExcludeFromDraw(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <label htmlFor="excludeFromDraw" style={{ cursor: 'pointer', fontWeight: 'bold' }}>
-                Too young to participate (excluded from the draw)
-              </label>
-            </div>
+            {!isManaged && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="excludeFromDraw"
+                  checked={excludeFromDraw}
+                  onChange={e => setExcludeFromDraw(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <label htmlFor="excludeFromDraw" style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                  Sit out this year's draw
+                </label>
+              </div>
+            )}
           </div>
+
+          {isManaged && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+              Child profiles are just for tracking a wishlist and shopping list - they're never part of the draw itself.
+            </p>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
@@ -716,6 +730,24 @@ export default function Admin() {
                   Use a separate group name for each household that shouldn't draw each other - e.g. a couple and their own kids. Don't put the whole extended family under one name, or a valid draw becomes impossible.
                 </small>
               )}
+            </div>
+
+            <div>
+              <label htmlFor="relationSelect" style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Relation to You (optional)</label>
+              <select
+                id="relationSelect"
+                value={relation}
+                onChange={e => setRelation(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
+              >
+                <option value="">Select relation...</option>
+                {RELATION_OPTIONS.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+                Grandson/Granddaughter lets that grandchild draw or be drawn by you specifically, even though you share a family group.
+              </small>
             </div>
           </div>
 
@@ -775,6 +807,9 @@ export default function Admin() {
                 <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
                     {u.name}
+                    {u.relation && (
+                      <div style={{ fontWeight: 'normal', color: 'var(--text-muted)', fontSize: '0.75rem' }}>{u.relation}</div>
+                    )}
                   </td>
                   <td style={{ padding: '0.75rem 0.5rem', color: '#ec4899' }}>
                     {u.familyId}
@@ -791,9 +826,14 @@ export default function Admin() {
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Member</span>
                     )}
-                    {u.excludeFromDraw && (
+                    {u.excludeFromDraw && !u.isManaged && (
                       <span style={{ marginLeft: '0.35rem', background: 'rgba(148,163,184,0.2)', color: '#94a3b8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', border: '1px solid rgba(148,163,184,0.35)' }}>
-                        Excluded from draw
+                        Sitting out this year
+                      </span>
+                    )}
+                    {!u.isManaged && !u.isExtra && !u.isMaster && !u.hasSignedIn && (
+                      <span style={{ marginLeft: '0.35rem', background: 'rgba(245,158,11,0.15)', color: '#fbbf24', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', border: '1px solid rgba(245,158,11,0.35)' }}>
+                        Hasn't signed in yet
                       </span>
                     )}
                   </td>

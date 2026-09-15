@@ -30,6 +30,7 @@ vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
   getDoc: vi.fn(),
   setDoc: vi.fn(),
+  updateDoc: vi.fn(),
   onSnapshot: vi.fn(),
   collection: vi.fn(),
   getDocs: vi.fn(),
@@ -64,7 +65,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -92,7 +93,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -120,7 +121,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -188,7 +189,7 @@ describe('AuthContext Unit', () => {
       expect(capturedAuth).toBeDefined();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     createUserWithEmailAndPassword.mockResolvedValue({ user: { email: 'invited@yahoo.com' } });
 
     await act(async () => {

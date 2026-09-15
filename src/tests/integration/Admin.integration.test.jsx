@@ -123,6 +123,40 @@ describe('Admin Integration', () => {
     alertMock.mockRestore();
   });
 
+  it('saves the selected "Relation to You" and who added them when adding a new member', async () => {
+    useAuth.mockReturnValue({
+      userProfile: { id: 'me@test.com', name: 'Me', familyId: 'FamA', isAdmin: true },
+      isMasterAdmin: false,
+      isAdmin: true
+    });
+
+    getDocs.mockResolvedValue({ docs: [] });
+    getDoc.mockResolvedValue({ exists: () => false });
+
+    render(
+      <MemoryRouter>
+        <Admin />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Full Name/i), { target: { value: 'Grandkid One' } });
+    fireEvent.change(screen.getByPlaceholderText(/Google Email/i), { target: { value: 'grandkid@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Relation to You/i), { target: { value: 'Grandson' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add & Send Invite/i }));
+
+    await waitFor(() => {
+      expect(setDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          relation: 'Grandson',
+          addedByUserId: 'me@test.com',
+          hasSignedIn: false
+        })
+      );
+    });
+  });
+
   it('allows Family Admin to delete non-admin family members but not themselves', async () => {
     useAuth.mockReturnValue({
       userProfile: { id: 'admin1', name: 'Admin User', familyId: 'Smith', isAdmin: true },
@@ -265,7 +299,7 @@ describe('Admin Integration', () => {
     });
   });
 
-  it('excludes members flagged excludeFromDraw from the Christmas Shopping List draw', async () => {
+  it('excludes Child profiles, non-signed-in adults, and manual opt-outs from the Christmas Shopping List draw', async () => {
     useAuth.mockReturnValue({
       userProfile: { id: 'master1', name: 'Master', familyId: 'FamA', role: 'master' },
       isMasterAdmin: true,
@@ -274,10 +308,12 @@ describe('Admin Integration', () => {
 
     getDocs.mockResolvedValue({
       docs: [
-        { id: 'master1', data: () => ({ name: 'Master', familyId: 'FamA', isAdmin: true, role: 'master' }) },
-        { id: 'u1', data: () => ({ name: 'Adult One', familyId: 'FamB' }) },
-        { id: 'u2', data: () => ({ name: 'Adult Two', familyId: 'FamC' }) },
-        { id: 'baby1', data: () => ({ name: 'Baby', familyId: 'FamB', excludeFromDraw: true }) }
+        { id: 'master1', data: () => ({ name: 'Master', familyId: 'FamA', isAdmin: true, role: 'master', hasSignedIn: true }) },
+        { id: 'u1', data: () => ({ name: 'Adult One', familyId: 'FamB', hasSignedIn: true }) },
+        { id: 'u2', data: () => ({ name: 'Adult Two', familyId: 'FamC', hasSignedIn: true }) },
+        { id: 'kid1', data: () => ({ name: 'Kid One', familyId: 'FamB', isManaged: true, hasSignedIn: true }) },
+        { id: 'not-signed-in', data: () => ({ name: 'Not Signed In', familyId: 'FamC', hasSignedIn: false }) },
+        { id: 'opt-out', data: () => ({ name: 'Opted Out', familyId: 'FamC', hasSignedIn: true, excludeFromDraw: true }) }
       ]
     });
 
@@ -290,8 +326,11 @@ describe('Admin Integration', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Baby')).toBeInTheDocument();
-      expect(screen.getByText('Excluded from draw')).toBeInTheDocument();
+      expect(screen.getByText('Kid One')).toBeInTheDocument();
+      expect(screen.getByText('Not Signed In')).toBeInTheDocument();
+      expect(screen.getByText('Opted Out')).toBeInTheDocument();
+      expect(screen.getByText('Sitting out this year')).toBeInTheDocument();
+      expect(screen.getByText("Hasn't signed in yet")).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Run Christmas Shopping List Draw/i }));
@@ -300,9 +339,10 @@ describe('Admin Integration', () => {
       expect(setDoc).toHaveBeenCalled();
     });
 
-    // The excluded baby should never be written to as a buyer with a recipientId
-    const excludedWasAssigned = setDoc.mock.calls.some(([ref]) => ref.id === 'baby1');
-    expect(excludedWasAssigned).toBe(false);
+    // None of the ineligible members should ever be written to as a buyer with a recipientId
+    const ineligibleIds = ['kid1', 'not-signed-in', 'opt-out'];
+    const anyIneligibleAssigned = setDoc.mock.calls.some(([ref]) => ineligibleIds.includes(ref.id));
+    expect(anyIneligibleAssigned).toBe(false);
 
     alertMock.mockRestore();
   });

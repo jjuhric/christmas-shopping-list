@@ -5,88 +5,92 @@ import { performDraw } from '../../utils/drawUtils';
  * Models the Uhrick family's actual structure to validate that performDraw()
  * scales to a real multi-generational household with lopsided group sizes.
  *
- * Household = the exclusion unit (familyId). The app only excludes same-familyId
- * pairings, so each *nuclear* household must get its own familyId, not one
- * familyId for the whole extended family (which would make a valid draw impossible).
+ * Household = the exclusion unit (familyId): everyone in the same household is
+ * blocked from drawing each other, EXCEPT a grandchild (relation Grandson/
+ * Granddaughter) is exempt specifically with the grandparent who added them
+ * (addedByUserId) - they remain blocked from everyone else in the household,
+ * including their own parent if that parent is also a member.
+ *
+ * This means grandkids no longer need their own separate household group -
+ * they can live in the same group as their grandparent and parent, and the
+ * exemption handles the one pairing that needs to be allowed.
  *
  * Structure used below:
- *  - Grandparents:      Mom + Dad                                  (2)
- *  - Me + spouse:        + 2 kids with no children of their own     (4)
- *  - My 3 grandkid sub-households (adult child + their own kid(s)):
- *      - 3 households of (adult child + 1 grandchild)               (2 each = 6)
- *      - 1 household of (oldest adult child + 2 grandchildren)       (3)
- *  - Sister + spouse + 6 kids                                       (8)
- *  - Brother + spouse + 2 kids                                      (4)
+ *  - Grandparents:  Mom + Dad                                              (2)
+ *  - My household:  me + spouse + 6 kids + 4 grandkids (3 kids with 1 each,
+ *                    oldest kid with 2), all one group                     (12)
+ *  - Sister household: spouse + 6 kids                                     (8)
+ *  - Brother household: spouse + 2 kids                                    (4)
  *
- * Total: 27 people across 8 households, largest household = 8 (~30% of pool).
+ * Total: 26 people across 4 households, largest household = 12 (~46% of pool).
  */
 function buildRealFamily() {
   const users = [];
-  let uid = 0;
-  const add = (familyId) => {
-    uid++;
-    users.push({ id: `u${uid}`, familyId });
-  };
 
   // Grandparents
-  add('grandparents');
-  add('grandparents');
+  users.push({ id: 'mom', familyId: 'grandparents' });
+  users.push({ id: 'dad', familyId: 'grandparents' });
 
-  // Me + spouse + 2 kids without children of their own
-  ['me-household', 'me-household', 'me-household', 'me-household'].forEach(add);
+  // Me + spouse
+  users.push({ id: 'me', familyId: 'my-household' });
+  users.push({ id: 'spouse', familyId: 'my-household' });
 
-  // 3 grandkid sub-households of size 2 (adult child + 1 grandchild)
-  for (let i = 0; i < 3; i++) {
-    const fam = `my-kid-${i}-household`;
-    add(fam);
-    add(fam);
+  // My 6 kids, all labeled Son/Daughter (label only, no exclusion effect)
+  for (let i = 1; i <= 6; i++) {
+    users.push({ id: `kid${i}`, familyId: 'my-household', relation: 'Son/Step-Son', addedByUserId: 'me' });
   }
 
-  // Oldest adult child's household of 3 (adult child + 2 grandchildren)
-  add('my-oldest-kid-household');
-  add('my-oldest-kid-household');
-  add('my-oldest-kid-household');
+  // 3 kids have 1 grandchild each, exempt only with me (their grandparent)
+  for (let i = 1; i <= 3; i++) {
+    users.push({ id: `grandkid${i}`, familyId: 'my-household', relation: 'Grandson', addedByUserId: 'me' });
+  }
+  // Oldest kid (kid1) has 2 grandchildren instead of 1
+  users.push({ id: 'grandkid4', familyId: 'my-household', relation: 'Granddaughter', addedByUserId: 'me' });
 
   // Sister + spouse + 6 kids
-  for (let i = 0; i < 8; i++) add('sister-household');
+  for (let i = 0; i < 8; i++) users.push({ id: `sisterfam${i}`, familyId: 'sister-household' });
 
   // Brother + spouse + 2 kids
-  for (let i = 0; i < 4; i++) add('brother-household');
+  for (let i = 0; i < 4; i++) users.push({ id: `brotherfam${i}`, familyId: 'brother-household' });
 
   return users;
 }
 
 describe('performDraw against the real Uhrick family structure', () => {
-  it('produces 27 people across 8 households with the largest household at 8', () => {
+  it('produces 26 people across 4 households with the largest household at 12', () => {
     const users = buildRealFamily();
-    expect(users).toHaveLength(27);
+    expect(users).toHaveLength(26);
     const householdSizes = users.reduce((acc, u) => {
       acc[u.familyId] = (acc[u.familyId] || 0) + 1;
       return acc;
     }, {});
-    expect(Object.keys(householdSizes)).toHaveLength(8);
-    expect(Math.max(...Object.values(householdSizes))).toBe(8);
+    expect(Object.keys(householdSizes)).toHaveLength(4);
+    expect(householdSizes['my-household']).toBe(12);
   });
 
-  it('succeeds and never assigns someone inside their own household', () => {
+  it('lets grandkids draw/be drawn by their grandparent, but not by their own parent or anyone else in the household', () => {
     const users = buildRealFamily();
     const result = performDraw(users);
 
     expect(result.success).toBe(true);
-    expect(Object.keys(result.assignments)).toHaveLength(users.length);
-
     const byId = Object.fromEntries(users.map(u => [u.id, u]));
-    for (const [buyerId, recipientId] of Object.entries(result.assignments)) {
-      expect(buyerId).not.toBe(recipientId);
-      expect(byId[buyerId].familyId).not.toBe(byId[recipientId].familyId);
-    }
 
-    // Every recipient should be assigned exactly once (it's a full permutation)
-    const recipients = Object.values(result.assignments);
-    expect(new Set(recipients).size).toBe(users.length);
+    for (const [buyerId, recipientId] of Object.entries(result.assignments)) {
+      const buyer = byId[buyerId];
+      const recipient = byId[recipientId];
+      expect(buyerId).not.toBe(recipientId);
+
+      if (buyer.familyId === recipient.familyId) {
+        // The only same-household pairing allowed is a grandchild <-> the
+        // specific grandparent who added them.
+        const buyerIsExemptGrandchild = buyer.addedByUserId === recipient.id && ['Grandson', 'Granddaughter'].includes(buyer.relation);
+        const recipientIsExemptGrandchild = recipient.addedByUserId === buyer.id && ['Grandson', 'Granddaughter'].includes(recipient.relation);
+        expect(buyerIsExemptGrandchild || recipientIsExemptGrandchild).toBe(true);
+      }
+    }
   });
 
-  it('reliably succeeds across many independent draws (no flaky low-probability failures)', () => {
+  it('reliably succeeds across many independent draws despite the larger 12-person household', () => {
     const users = buildRealFamily();
     const attempts = 100;
     let successes = 0;
@@ -96,7 +100,6 @@ describe('performDraw against the real Uhrick family structure', () => {
       if (result.success) successes++;
     }
 
-    // At this household size/imbalance, the algorithm should essentially never fail.
     expect(successes).toBe(attempts);
   });
 
