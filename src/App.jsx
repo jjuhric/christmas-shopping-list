@@ -5,6 +5,12 @@ import Dashboard from './components/Dashboard';
 import Admin from './components/Admin';
 import BugReportModal from './components/BugReportModal';
 import Snowfall from './components/Snowfall';
+import Footer from './components/Footer';
+import AboutPage from './components/AboutPage';
+import FaqPage from './components/FaqPage';
+import InstructionsHome from './components/InstructionsHome';
+import AdultInstructionsPage from './components/AdultInstructionsPage';
+import ChildInstructionsPage from './components/ChildInstructionsPage';
 
 // Custom wrapper for private routes
 function PrivateRoute({ children }) {
@@ -32,24 +38,31 @@ export default function App() {
 
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route 
-            path="/admin" 
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/instructions" element={<InstructionsHome />} />
+          <Route path="/instructions/adults" element={<AdultInstructionsPage />} />
+          <Route path="/instructions/kids" element={<ChildInstructionsPage />} />
+          <Route
+            path="/admin"
             element={
               <AdminRoute>
                 <Admin />
               </AdminRoute>
-            } 
+            }
           />
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <PrivateRoute>
                 <Dashboard />
               </PrivateRoute>
-            } 
+            }
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+
+        <Footer />
       </Router>
     </AuthProvider>
   );
