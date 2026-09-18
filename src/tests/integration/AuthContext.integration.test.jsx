@@ -70,7 +70,7 @@ describe('AuthContext Integration', () => {
     });
   });
 
-  it('sets isUninvited for subsequent users not in DB', async () => {
+  it('creates a new family admin for subsequent uninvited users not in DB', async () => {
     onAuthStateChanged.mockImplementation((auth, callback) => {
       callback({ email: 'second@test.com' });
       return vi.fn();
@@ -78,7 +78,7 @@ describe('AuthContext Integration', () => {
 
     // User doc doesn't exist
     getDoc.mockResolvedValue({ exists: () => false });
-    
+
     // Other users DO exist in the database (getDocs is not empty)
     getDocs.mockResolvedValue({ empty: false });
 
@@ -89,9 +89,18 @@ describe('AuthContext Integration', () => {
     );
 
     await waitFor(() => {
-      // It should NOT call setDoc
-      expect(setDoc).not.toHaveBeenCalled();
-      expect(screen.getByTestId('profile').textContent).toBe('none');
+      // They become the admin of a brand-new family, not the Master Admin
+      expect(setDoc).toHaveBeenCalledWith(
+        undefined, // Because doc() is mocked
+        expect.objectContaining({
+          role: 'admin',
+          isAdmin: true,
+          isMaster: false,
+          familyId: '',
+          email: 'second@test.com'
+        })
+      );
+      expect(screen.getByTestId('profile').textContent).toBe('admin');
     });
   });
 });

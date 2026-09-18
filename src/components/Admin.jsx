@@ -5,11 +5,12 @@ import { collection, getDocs, setDoc, doc, deleteDoc, getDoc, updateDoc, query, 
 import { Link } from 'react-router-dom';
 import { ShieldCheck, UserPlus, Trash2, Mail, Send, Settings, ArrowLeft, RefreshCw, Bug, CheckCircle, Edit2, X } from 'lucide-react';
 import { sendInviteEmail, getEmailConfig, saveEmailConfig } from '../utils/emailService';
-import { performDraw } from '../utils/drawUtils';
+import { performDraw, getDrawEligibleUsers } from '../utils/drawUtils';
+import { RELATION_OPTIONS } from '../utils/relations';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function Admin() {
-  const { userProfile, isMasterAdmin, isAdmin } = useAuth();
+  const { userProfile, isMasterAdmin, isAdmin, resetPassword } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [name, setName] = useState('');
@@ -17,6 +18,8 @@ export default function Admin() {
   const [family, setFamily] = useState(userProfile?.familyId || '');
   const [newUserIsAdmin, setNewUserIsAdmin] = useState(false);
   const [isManaged, setIsManaged] = useState(false);
+  const [excludeFromDraw, setExcludeFromDraw] = useState(false);
+  const [relation, setRelation] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -172,6 +175,10 @@ export default function Admin() {
         isAdmin: isManaged ? false : newUserIsAdmin,
         role: newUserIsAdmin ? 'admin' : 'user',
         isManaged: isManaged,
+        excludeFromDraw: excludeFromDraw,
+        relation: relation || null,
+        addedByUserId: userProfile.id,
+        hasSignedIn: false,
         setupComplete: false,
         wishlist: [],
         recipientId: null,
@@ -207,6 +214,8 @@ export default function Admin() {
       if (isMasterAdmin) setFamily('');
       setNewUserIsAdmin(false);
       setIsManaged(false);
+      setExcludeFromDraw(false);
+      setRelation('');
       fetchUsers();
     } catch (err) {
       console.error("Error adding user: ", err);
@@ -230,6 +239,30 @@ export default function Admin() {
       alert(`Invite email sent to ${user.email}!`);
     } else {
       alert(result.message || "Failed to send email.");
+    }
+  }
+
+  // Master Admin only: send a password reset email so any member can regain
+  // access over the holidays. Only applies to email/password accounts - Google
+  // sign-in users manage their own password through Google and will get a
+  // "no password account" style error, which we surface as a friendly message.
+  async function handleResetPassword(user) {
+    if (!user.email) return;
+    if (!window.confirm(`Send a password reset email to ${user.name} (${user.email})?`)) return;
+
+    setLoading(true);
+    try {
+      await resetPassword(user.email);
+      alert(`Password reset email sent to ${user.email}!`);
+    } catch (err) {
+      console.error("Error sending password reset:", err);
+      if (err.code === 'auth/user-not-found') {
+        alert(`No password-based account found for ${user.email}. They likely sign in with Google, or haven't activated their account yet.`);
+      } else {
+        alert("Failed to send password reset email: " + err.message);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -379,7 +412,7 @@ export default function Admin() {
 
   async function handleDraw() {
     setLoading(true);
-    const result = performDraw(users);
+    const result = performDraw(getDrawEligibleUsers(users));
 
     if (!result.success) {
       alert(result.message);
@@ -442,10 +475,10 @@ export default function Admin() {
                 <Settings size={18} /> EmailJS Setup
               </button>
               
-              <button 
-                className="btn btn-primary" 
-                onClick={handleDraw} 
-                disabled={loading || users.length < 3}
+              <button
+                className="btn btn-primary"
+                onClick={handleDraw}
+                disabled={loading || getDrawEligibleUsers(users).length < 3}
               >
                 Run Christmas Shopping List Draw
               </button>
@@ -619,11 +652,11 @@ export default function Admin() {
 
             {!isManaged && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="newUserIsAdmin"
-                  checked={newUserIsAdmin} 
-                  onChange={e => setNewUserIsAdmin(e.target.checked)} 
+                  checked={newUserIsAdmin}
+                  onChange={e => setNewUserIsAdmin(e.target.checked)}
                   style={{ width: '18px', height: '18px' }}
                 />
                 <label htmlFor="newUserIsAdmin" style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--primary)' }}>
@@ -631,16 +664,37 @@ export default function Admin() {
                 </label>
               </div>
             )}
+
+            {!isManaged && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="excludeFromDraw"
+                  checked={excludeFromDraw}
+                  onChange={e => setExcludeFromDraw(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <label htmlFor="excludeFromDraw" style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                  Sit out this year's draw
+                </label>
+              </div>
+            )}
           </div>
+
+          {isManaged && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+              Child profiles are just for tracking a wishlist and shopping list - they're never part of the draw itself.
+            </p>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Full Name</label>
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={e => setName(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
                 required
               />
@@ -649,11 +703,11 @@ export default function Admin() {
             {!isManaged && (
               <div>
                 <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Google Email (Unique)</label>
-                <input 
-                  type="email" 
-                  placeholder="Google Email" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
+                <input
+                  type="email"
+                  placeholder="Google Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
                   required
                 />
@@ -662,15 +716,38 @@ export default function Admin() {
 
             <div>
               <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Family Group Name</label>
-              <input 
-                type="text" 
-                placeholder="Family Name (e.g. Uhrick)" 
-                value={isMasterAdmin ? family : userProfile?.familyId} 
-                onChange={e => isMasterAdmin && setFamily(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Family Name (e.g. Uhrick)"
+                value={isMasterAdmin ? family : userProfile?.familyId}
+                onChange={e => isMasterAdmin && setFamily(e.target.value)}
                 disabled={!isMasterAdmin}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: isMasterAdmin ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.05)', color: 'white' }}
                 required
               />
+              {isMasterAdmin && (
+                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+                  Use a separate group name for each household that shouldn't draw each other - e.g. a couple and their own kids. Don't put the whole extended family under one name, or a valid draw becomes impossible.
+                </small>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="relationSelect" style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.85rem' }}>Relation to You (optional)</label>
+              <select
+                id="relationSelect"
+                value={relation}
+                onChange={e => setRelation(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', color: 'white' }}
+              >
+                <option value="">Select relation...</option>
+                {RELATION_OPTIONS.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+                Grandson/Granddaughter lets that grandchild draw or be drawn by you specifically, even though you share a family group.
+              </small>
             </div>
           </div>
 
@@ -730,6 +807,9 @@ export default function Admin() {
                 <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>
                     {u.name}
+                    {u.relation && (
+                      <div style={{ fontWeight: 'normal', color: 'var(--text-muted)', fontSize: '0.75rem' }}>{u.relation}</div>
+                    )}
                   </td>
                   <td style={{ padding: '0.75rem 0.5rem', color: '#ec4899' }}>
                     {u.familyId}
@@ -746,6 +826,16 @@ export default function Admin() {
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Member</span>
                     )}
+                    {u.excludeFromDraw && !u.isManaged && (
+                      <span style={{ marginLeft: '0.35rem', background: 'rgba(148,163,184,0.2)', color: '#94a3b8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', border: '1px solid rgba(148,163,184,0.35)' }}>
+                        Sitting out this year
+                      </span>
+                    )}
+                    {!u.isManaged && !u.isExtra && !u.isMaster && !u.hasSignedIn && (
+                      <span style={{ marginLeft: '0.35rem', background: 'rgba(245,158,11,0.15)', color: '#fbbf24', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', border: '1px solid rgba(245,158,11,0.35)' }}>
+                        Hasn't signed in yet
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     {u.email || '—'}
@@ -759,6 +849,17 @@ export default function Admin() {
                           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#60a5fa', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}
                         >
                           <Send size={15} />
+                        </button>
+                      )}
+                      {/* Master Admin only: reset a member's password so they can keep using the app over the holidays */}
+                      {isMasterAdmin && u.email && (
+                        <button
+                          onClick={() => handleResetPassword(u)}
+                          title="Send Password Reset Email"
+                          data-testid={`reset-password-${u.id}`}
+                          style={{ background: 'rgba(245,158,11,0.2)', border: 'none', color: '#fbbf24', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}
+                        >
+                          <RefreshCw size={15} />
                         </button>
                       )}
                       {/* Edit member button */}

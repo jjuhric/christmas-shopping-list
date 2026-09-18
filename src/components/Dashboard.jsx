@@ -269,24 +269,13 @@ export default function Dashboard() {
     );
   }
 
-  // If user signed in with Google but is not invited / has no record
+  // Profile doc is still being created/loaded right after first sign-in
   if (isUninvited || !userProfile) {
     return (
       <div className="login-container">
-        <div className="glass-card login-card">
-          <div className="icon-wrapper" style={{ background: 'rgba(239,68,68,0.2)', boxShadow: 'none' }}>
-            <Gift size={36} color="#ef4444" />
-          </div>
-          <h2>Account Not Found</h2>
-          <p className="subtitle" style={{ marginTop: '0.5rem' }}>
-            The email <strong>{currentUser?.email}</strong> has not been invited to a Christmas Shopping List family yet.
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            Please contact your Family Admin to send you an invitation email.
-          </p>
-          <button className="btn btn-primary btn-large" onClick={logout}>
-            <LogOut size={18} /> Sign Out
-          </button>
+        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <Gift size={48} color="var(--primary)" style={{ animation: 'bounce 1s infinite' }} />
+          <h2 style={{ marginTop: '1rem' }}>Setting up your account...</h2>
         </div>
       </div>
     );

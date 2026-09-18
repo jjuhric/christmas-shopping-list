@@ -30,6 +30,7 @@ vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
   getDoc: vi.fn(),
   setDoc: vi.fn(),
+  updateDoc: vi.fn(),
   onSnapshot: vi.fn(),
   collection: vi.fn(),
   getDocs: vi.fn(),
@@ -64,7 +65,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -92,7 +93,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -120,7 +121,7 @@ describe('AuthContext Unit', () => {
       return vi.fn();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     onSnapshot.mockImplementation((ref, callback) => {
       callback({
         exists: () => true,
@@ -188,7 +189,7 @@ describe('AuthContext Unit', () => {
       expect(capturedAuth).toBeDefined();
     });
 
-    getDoc.mockResolvedValue({ exists: () => true });
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ hasSignedIn: true }) });
     createUserWithEmailAndPassword.mockResolvedValue({ user: { email: 'invited@yahoo.com' } });
 
     await act(async () => {
@@ -202,7 +203,7 @@ describe('AuthContext Unit', () => {
     );
   });
 
-  it('rejects activating uninvited email when user collection has members', async () => {
+  it('allows activating an uninvited email (they become a new family admin)', async () => {
     onAuthStateChanged.mockImplementation((auth, callback) => {
       callback(null);
       return vi.fn();
@@ -221,12 +222,17 @@ describe('AuthContext Unit', () => {
 
     getDoc.mockResolvedValue({ exists: () => false });
     getDocs.mockResolvedValue({ empty: false });
+    createUserWithEmailAndPassword.mockResolvedValue({ user: { email: 'stranger@yahoo.com' } });
 
-    await expect(
-      capturedAuth.activateEmailAccount('stranger@yahoo.com', 'password123')
-    ).rejects.toThrow(/not been invited/i);
+    await act(async () => {
+      await capturedAuth.activateEmailAccount('stranger@yahoo.com', 'password123');
+    });
 
-    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+    expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+      expect.anything(),
+      'stranger@yahoo.com',
+      'password123'
+    );
   });
 
   it('calls sendPasswordResetEmail on resetPassword', async () => {
