@@ -24,7 +24,9 @@ export default function AboutPage() {
         </p>
         <p>
           Not sure how something works? The <Link to="/instructions" style={{ color: '#fbbf24', fontWeight: 600 }}>Instructions page</Link> walks
-          through every screen in the app step by step.
+          through every screen in the app step by step, or see the full{' '}
+          <a href="app-map.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', fontWeight: 600 }}>Flow Chart</a> for
+          a visual walkthrough of every role, sign-in path, and screen in one PDF.
         </p>
 
         <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
