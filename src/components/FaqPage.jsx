@@ -44,6 +44,15 @@ const FAQS = [
   {
     q: 'Can the draw be re-run if someone joins late or leaves?',
     a: 'Yes, an Admin can run the draw again from the Admin Panel. Keep in mind this reassigns everyone\'s recipient, so only re-run it if the family agrees - otherwise someone\'s "secret" recipient could change.'
+  },
+  {
+    q: 'Is there a visual overview of how the whole app works?',
+    a: (
+      <>
+        Yes - see the <a href="app-map.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', fontWeight: 600 }}>Flow Chart</a>,
+        a one-page-per-topic PDF covering every role, sign-in path, and screen from login to the Secret Santa draw.
+      </>
+    )
   }
 ];
 
