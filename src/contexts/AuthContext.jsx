@@ -32,18 +32,9 @@ export function AuthProvider({ children }) {
 
   async function activateEmailAccount(email, password) {
     const cleanEmail = email.toLowerCase().trim();
-    // Verify that this email is an invited user in Firestore (or if it's the first ever user)
-    const userRef = doc(db, 'users', cleanEmail);
-    const snap = await getDoc(userRef);
-
-    if (!snap.exists()) {
-      const q = query(collection(db, 'users'), limit(1));
-      const allUsersSnap = await getDocs(q);
-      if (!allUsersSnap.empty) {
-        throw new Error("This email has not been invited. Please ask your family admin to invite you first.");
-      }
-    }
-
+    // If invited, this just creates the Auth credential for their existing
+    // Firestore profile. If not invited, onAuthStateChanged will set them up
+    // as the admin of a brand-new family.
     return createUserWithEmailAndPassword(auth, cleanEmail, password);
   }
 
@@ -75,33 +66,30 @@ export function AuthProvider({ children }) {
             const q = query(collection(db, 'users'), limit(1));
             const allUsersSnap = await getDocs(q);
 
-            if (allUsersSnap.empty) {
-              // First ever user to sign in! Assign Master Admin
-              const initialMaster = {
-                id: email,
-                name: user.displayName || 'Master Admin',
-                email: email,
-                photoURL: user.photoURL || '',
-                familyId: '',
-                role: 'master',
-                isAdmin: true,
-                isMaster: true,
-                isManaged: false,
-                setupComplete: false,
-                wishlist: [],
-                recipientId: null,
-                purchasedMembers: {},
-                hasSignedIn: true,
-                createdAt: Date.now()
-              };
-              await setDoc(userRef, initialMaster);
-              setUserProfile(initialMaster);
-              setIsUninvited(false);
-            } else {
-              // Not the first user, and no invite found for this email
-              setUserProfile(null);
-              setIsUninvited(true);
-            }
+            const isFirstEverUser = allUsersSnap.empty;
+            // No invite found for this email: they become the admin of a
+            // brand-new family of their own (the very first user in the
+            // whole system is additionally granted cross-family Master Admin).
+            const newFamilyAdmin = {
+              id: email,
+              name: user.displayName || '',
+              email: email,
+              photoURL: user.photoURL || '',
+              familyId: '',
+              role: isFirstEverUser ? 'master' : 'admin',
+              isAdmin: true,
+              isMaster: isFirstEverUser,
+              isManaged: false,
+              setupComplete: false,
+              wishlist: [],
+              recipientId: null,
+              purchasedMembers: {},
+              hasSignedIn: true,
+              createdAt: Date.now()
+            };
+            await setDoc(userRef, newFamilyAdmin);
+            setUserProfile(newFamilyAdmin);
+            setIsUninvited(false);
           } else {
             setIsUninvited(false);
             // First time this invited member has actually signed in - only

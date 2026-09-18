@@ -26,3 +26,6 @@ dist-ssr
 # Testing
 playwright-report/
 test-results/
+
+# Local dev tooling
+.claude/

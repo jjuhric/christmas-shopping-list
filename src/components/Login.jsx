@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import santaScrollIcon from '../assets/santa-scroll.jpg';
 
 export default function Login() {
@@ -9,6 +10,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -190,24 +193,47 @@ export default function Login() {
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
                 Password {authMode === 'activate' && '(min 6 characters)'}
               </label>
-              <input 
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                data-testid="password-input"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--glass-border)',
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.95rem',
-                  outline: 'none'
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  data-testid="password-input"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 2.75rem 0.75rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.95rem',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  data-testid="toggle-password-visibility"
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.25rem'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
 
@@ -216,24 +242,47 @@ export default function Login() {
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
                 Confirm Password
               </label>
-              <input 
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                data-testid="confirm-password-input"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--glass-border)',
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.95rem',
-                  outline: 'none'
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  data-testid="confirm-password-input"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 2.75rem 0.75rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.95rem',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(prev => !prev)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  data-testid="toggle-confirm-password-visibility"
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.25rem'
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
 
