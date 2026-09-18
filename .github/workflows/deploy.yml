@@ -8,19 +8,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.ref_name }}"
   cancel-in-progress: true
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,12 +48,28 @@ jobs:
 
       - name: Build
         run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+
+      # main -> production, published at the site root:
+      #   https://jjuhric.github.io/christmas-shopping-list/
+      - name: Deploy production (main) to Pages root
+        if: github.ref_name == 'main'
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: './dist'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: .
+          keep_files: true
+          commit_message: "deploy: production from ${{ github.sha }}"
+
+      # develop -> development, published at a /dev/ subpath so it never
+      # overwrites production:
+      #   https://jjuhric.github.io/christmas-shopping-list/dev/
+      - name: Deploy development (develop) to /dev subpath
+        if: github.ref_name == 'develop'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: dev
+          keep_files: true
+          commit_message: "deploy: development from ${{ github.sha }}"
