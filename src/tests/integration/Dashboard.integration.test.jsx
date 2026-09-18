@@ -34,10 +34,11 @@ describe('Dashboard Integration', () => {
     onSnapshot.mockReturnValue(vi.fn());
   });
 
-  it('renders "Not Invited" message when user is uninvited', () => {
+  it('shows a setup-in-progress state while the new profile doc is being created', () => {
     useAuth.mockReturnValue({
       currentUser: { email: 'stranger@test.com' },
-      isUninvited: true,
+      isUninvited: false,
+      userProfile: null,
       loading: false
     });
 
@@ -47,7 +48,7 @@ describe('Dashboard Integration', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Account Not Found/i)).toBeInTheDocument();
+    expect(screen.getByText(/Setting up your account/i)).toBeInTheDocument();
   });
 
   it('redirects to SetupWizard if setupComplete is false', () => {

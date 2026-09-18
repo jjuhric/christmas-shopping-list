@@ -31,19 +31,21 @@ vi.mock('firebase/firestore', () => ({
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Admin from '../../components/Admin';
 import Dashboard from '../../components/Dashboard';
+import { onSnapshot } from 'firebase/firestore';
 
 describe('Access Control Regression', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    onSnapshot.mockReturnValue(vi.fn());
   });
 
-  it('redirects uninvited users immediately to the uninvited screen', async () => {
+  it('sends an uninvited user straight into new-family setup, not a dead end', async () => {
     onAuthStateChanged.mockImplementation((auth, callback) => {
-      callback({ email: 'hacker@test.com' });
+      callback({ email: 'newcomer@test.com' });
       return vi.fn();
     });
 
-    // Hacker is not in database
+    // Newcomer is not in database yet
     getDoc.mockResolvedValue({ exists: () => false });
     getDocs.mockResolvedValue({ empty: false });
 
@@ -58,7 +60,8 @@ describe('Access Control Regression', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Account Not Found/i)).toBeInTheDocument();
+      // They become a new family admin and land in the Setup Wizard
+      expect(screen.getByText(/Welcome to Christmas Shopping List!/i)).toBeInTheDocument();
     });
   });
 
