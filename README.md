@@ -1,3 +1,5 @@
+> **PROOF OF CONCEPT (2026-11-09): not in use.** This was built to try an idea out. It is not maintained and gets no fixes or updates.
+
 # Christmas Shopping List
 
 <img src="./public/santa-icon.jpg" alt="Santa Reading Scroll" width="200" />
